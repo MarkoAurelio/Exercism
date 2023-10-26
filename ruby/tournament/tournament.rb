@@ -2,37 +2,63 @@ class Tournament
     class << self
 
         def tally(input)
-            @matches = input ? input.split(/\n/) : nil
-            generate_results
+            return header if input.strip.empty?
+          
+            team_stats = initialize_team_stats
+            process_matches(input, team_stats)
+            sorted_stats = team_stats.sort_by { |team, stats| [-stats[:points], team] }.to_h
+          
+            build_table(sorted_stats)
         end
+
+        private
 
         def header
-            "Team                           | MP |  W |  D |  L |  P"
+            generate_line("Team", "MP", "W", "D", "L", "P")
         end
 
-        def generate_line(match)
-            "#{match[0]}            |  1 |  #{match.count('win')} |  #{match.count('draw')} |  #{match.count('loss')} |  #{MATCH_POINTS[match[2].to_sym]}\n"
+        def generate_line(team, mp, w, d, l, p)
+            "#{team.ljust(30)} | #{mp.to_s.rjust(2)} | #{w.to_s.rjust(2)} | #{d.to_s.rjust(2)} | #{l.to_s.rjust(2)} | #{p.to_s.rjust(2)}\n"
         end
 
-        def generate_results
-            <<~RESULT
-                #{header}
-            RESULT
+        def initialize_team_stats
+            Hash.new { |hash, key| hash[key] = { MP: 0, win: 0, draw: 0, loss: 0, points: 0 } }
         end
 
+        def process_matches(input, team_stats)
+            input.each_line do |line|
+                teamA, teamB, result = line.strip.split(';')
+                result_teamA = result.to_sym
+                result_teamB = nil
+            
+                case result
+                when 'win'
+                    result_teamB = :loss
+                when 'loss'
+                    result_teamB = :win
+                when 'draw'
+                    result_teamB = :draw
+                end
+            
+                update_stats(team_stats, teamA, MATCH_POINTS[result_teamA], result_teamA)
+                update_stats(team_stats, teamB, MATCH_POINTS[result_teamB], result_teamB)
+            end
+        end
 
-
-        # def generate_results
-        #     return header unless @matches
-        #     <<~RESULT
-        #         #{header}
-        #         #{generate_team(@matches[0])}
-        #     RESULT
-        # end
-
-        # def generate_team(match)
-        #     "#{match[0]}            |  1 |  #{match.count('win')} |  #{match.count('draw')} |  #{match.count('loss')} |  #{MATCH_POINTS[match[2]]}"
-        # end
+        def update_stats(stats, team, points, result)
+            stats[team] ||= { MP: 0, win: 0, draw: 0, loss: 0, points: 0}
+            stats[team][:MP] += 1
+            stats[team][result] += 1
+            stats[team][:points] += points
+        end
+          
+        def build_table(team_stats)
+            stats_result = header
+            team_stats.each do |team, stats|
+                stats_result += generate_line(team, stats[:MP], stats[:win], stats[:draw], stats[:loss], stats[:points])
+            end
+            stats_result
+        end
 
         MATCH_POINTS = {
             win: 3,
@@ -41,39 +67,3 @@ class Tournament
         }
     end
 end
-
-# # Allegoric Alaskans;Blithering Badgers;win
-
-
-
-# Team                           | MP |  W |  D |  L |  P
-# Devastating Donkeys            |  3 |  2 |  1 |  0 |  7
-# Allegoric Alaskans             |  3 |  2 |  0 |  1 |  6
-# Blithering Badgers             |  3 |  1 |  0 |  2 |  3
-# Courageous Californians        |  3 |  0 |  1 |  2 |  1
-
-
-# def create_table(data)
-#     # Calcula o comprimento de cada coluna
-#     column_lengths = data.transpose.map { |column| column.map(&:to_s).max_by(&:length).length }
-  
-#     # Formata a primeira linha da tabela (cabeçalho)
-#     header = data[0].zip(column_lengths).map { |value, length| value.to_s.ljust(length) }.join(" | ")
-  
-#     # Formata as linhas de dados
-#     rows = data[1..-1].map do |row|
-#       row.zip(column_lengths).map { |value, length| value.to_s.ljust(length) }.join(" | ")
-#     end
-  
-#     # Une o cabeçalho e as linhas de dados com uma linha horizontal
-#     table = [header, "-" * header.length] + rows
-  
-#     # Retorna a tabela como uma string
-#     table.join("\n")
-#   end
-
-
-
-# # # Win = 3 0
-# # # Draw = 1 1
-# # # Los = 0 3
